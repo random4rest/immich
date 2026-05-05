@@ -8,6 +8,8 @@ permissions: {}
 
 jobs:
   validate-release-label:
+    # Fork: skipped — depends on PUSH_O_MATIC GitHub App + the changelog labels that only exist on upstream
+    if: github.repository == 'immich-app/immich'
     runs-on: ubuntu-latest
     permissions:
       issues: write
