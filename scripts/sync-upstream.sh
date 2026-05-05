@@ -103,7 +103,7 @@ cmd_check() {
   local backup="${PROD_BACKUP:-}"
   if [[ -z "$backup" ]]; then
     if [[ -d "$UPLOAD_LOCATION/backups" ]]; then
-      backup="$(ls -1t "$UPLOAD_LOCATION"/backups/*.sql.gz "$UPLOAD_LOCATION"/backups/*.sql 2>/dev/null | head -1 || true)"
+      backup="$(find "$UPLOAD_LOCATION/backups" -maxdepth 1 -type f \( -name '*.sql.gz' -o -name '*.sql' \) -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2- || true)"
     fi
   fi
   if [[ -z "$backup" || ! -f "$backup" ]]; then
@@ -153,7 +153,7 @@ EOF
   applied="$(docker exec "$CONTAINER" psql -U postgres -d immich -tAc \
     "SELECT name FROM kysely_migrations ORDER BY name;" 2>/dev/null || true)"
   local in_repo
-  in_repo="$(ls "$REPO_ROOT/server/src/schema/migrations/" | sed 's/\.ts$//' | sort)"
+  in_repo="$(find "$REPO_ROOT/server/src/schema/migrations/" -maxdepth 1 -type f -name '*.ts' -printf '%f\n' | sed 's/\.ts$//' | sort)"
   local pending
   pending="$(comm -23 <(echo "$in_repo") <(echo "$applied"))"
 
@@ -161,7 +161,7 @@ EOF
     echo "  no pending migrations — DB schema already matches the new code"
   else
     echo "  pending migrations to be applied on deploy:"
-    echo "$pending" | sed 's/^/    /'
+    while IFS= read -r line; do echo "    $line"; done <<< "$pending"
     echo
     echo "  Scanning their up() bodies for destructive ops..."
     local destructive=0

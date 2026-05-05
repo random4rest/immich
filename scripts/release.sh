@@ -43,7 +43,7 @@ run() {
   if [[ "$DRY_RUN" == "1" ]]; then
     echo "DRY RUN: $*"
   else
-    eval "$@"
+    "$@"
   fi
 }
 
@@ -106,10 +106,10 @@ fi
 # Build the server image with stable BUILD_ID
 echo
 echo "==> Building immich-server:$VERSION"
-run "docker build \
-  -t 'immich-server:$VERSION' \
-  --build-arg BUILD_ID='$VERSION' \
-  -f server/Dockerfile ."
+run docker build \
+  -t "immich-server:$VERSION" \
+  --build-arg "BUILD_ID=$VERSION" \
+  -f server/Dockerfile .
 
 # SvelteKit hash sanity check — only if not dry-run
 if [[ "$DRY_RUN" != "1" ]]; then
@@ -132,7 +132,7 @@ fi
 # Tag + push
 echo
 echo "==> Tagging $VERSION"
-run "git tag -a '$VERSION' -m 'release $VERSION'"
+run git tag -a "$VERSION" -m "release $VERSION"
 
 if [[ "$NO_PUSH" == "1" ]]; then
   echo
@@ -141,7 +141,7 @@ if [[ "$NO_PUSH" == "1" ]]; then
 else
   echo
   echo "==> Pushing tag to origin"
-  run "git push origin '$VERSION'"
+  run git push origin "$VERSION"
 fi
 
 cat <<EOF
