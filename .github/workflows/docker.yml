@@ -53,7 +53,8 @@ jobs:
     permissions:
       contents: read
       packages: write
-    if: ${{ fromJSON(needs.pre-job.outputs.should_run).machine-learning == false && !github.event.pull_request.head.repo.fork }}
+    # Fork: skipped — there's no pre-existing ghcr.io/<fork-org>/immich-machine-learning:main image to retag
+    if: ${{ github.repository == 'immich-app/immich' && fromJSON(needs.pre-job.outputs.should_run).machine-learning == false && !github.event.pull_request.head.repo.fork }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -83,7 +84,8 @@ jobs:
     permissions:
       contents: read
       packages: write
-    if: ${{ fromJSON(needs.pre-job.outputs.should_run).server == false && !github.event.pull_request.head.repo.fork }}
+    # Fork: skipped — there's no pre-existing ghcr.io/<fork-org>/immich-server:main image to retag
+    if: ${{ github.repository == 'immich-app/immich' && fromJSON(needs.pre-job.outputs.should_run).server == false && !github.event.pull_request.head.repo.fork }}
     runs-on: ubuntu-latest
     strategy:
       matrix:

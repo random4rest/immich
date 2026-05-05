@@ -11,6 +11,8 @@ env:
 jobs:
   checks:
     name: Docs Deploy Checks
+    # Fork: skipped — depends on PUSH_O_MATIC GitHub App + Cloudflare/Postgres state secrets that only exist on upstream
+    if: github.repository == 'immich-app/immich'
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -116,7 +118,7 @@ jobs:
       contents: read
       actions: read
       pull-requests: write
-    if: ${{ fromJson(needs.checks.outputs.artifact).found && fromJson(needs.checks.outputs.parameters).shouldDeploy }}
+    if: ${{ github.repository == 'immich-app/immich' && fromJson(needs.checks.outputs.artifact).found && fromJson(needs.checks.outputs.parameters).shouldDeploy }}
     steps:
       - id: token
         uses: immich-app/devtools/actions/create-workflow-token@57ff6ebfd507b045514442683ff06ff1b2f6efbd # create-workflow-token-action-v1.0.2
