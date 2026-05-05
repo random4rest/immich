@@ -30,3 +30,7 @@ vite.config.js.timestamp-*
 .devcontainer/.env*
 *.tsbuildinfo
 *.tsbuildInfo
+
+# Fork-only: local tool state (not from upstream)
+.gastown-ignore
+.claude/settings.local.json
