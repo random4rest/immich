@@ -36,7 +36,7 @@ services:
     extends:
       service: immich-app-base
     profiles: !reset []
-    container_name: immich_init
+    container_name: immich_init_dev
     image: immich-server-dev:latest
     build:
       context: ../
@@ -61,7 +61,7 @@ services:
     extends:
       service: immich-app-base
     profiles: !reset []
-    container_name: immich_server
+    container_name: immich_server_dev
     command: ['immich-dev']
     image: immich-server-dev:latest
     build:
@@ -91,10 +91,12 @@ services:
       IMMICH_THIRD_PARTY_DOCUMENTATION_URL: https://docs.immich.app
       IMMICH_THIRD_PARTY_SUPPORT_URL: https://docs.immich.app/community-guides
       IMMICH_HELMET_FILE: 'true'
+    # Ports shifted so dev can run alongside the prod stack in immich-app/.
+    # Prod keeps the canonical 2283 (Tailscale clients are pointed at it).
     ports:
-      - 9230:9230
-      - 9231:9231
-      - 2283:2283
+      - 9330:9230   # node debug
+      - 9331:9231   # node debug
+      - 3283:2283   # server API
     depends_on:
       immich-init:
         condition: service_healthy
@@ -109,7 +111,7 @@ services:
     extends:
       service: immich-app-base
     profiles: !reset []
-    container_name: immich_web
+    container_name: immich_web_dev
     image: immich-web-dev:latest
     build:
       context: ../
@@ -118,9 +120,10 @@ services:
     command: ['immich-web']
     env_file:
       - .env
+    # Web on 3001 (vs prod's 2283 web served by the server image).
     ports:
-      - 3000:3000
-      - 24678:24678
+      - 3001:3000   # browser entry point
+      - 24679:24678 # vite HMR
     volumes:
       - pnpm_store_web:/buildcache/pnpm-store
     restart: unless-stopped
@@ -131,7 +134,7 @@ services:
         condition: service_started
 
   immich-machine-learning:
-    container_name: immich_machine_learning
+    container_name: immich_machine_learning_dev
     image: immich-machine-learning-dev:latest
     # extends:
     #   file: hwaccel.ml.yml
@@ -142,7 +145,7 @@ services:
       args:
         - DEVICE=cpu # set to one of [armnn, cuda, rocm, openvino, openvino-wsl, rknn] for accelerated inference
     ports:
-      - 3003:3003
+      - 3103:3003
     volumes:
       - ../machine-learning/immich_ml:/usr/src/immich_ml
       - model_cache:/cache
@@ -155,13 +158,13 @@ services:
       disable: false
 
   redis:
-    container_name: immich_redis
+    container_name: immich_redis_dev
     image: docker.io/valkey/valkey:9@sha256:3b55fbaa0cd93cf0d9d961f405e4dfcc70efe325e2d84da207a0a8e6d8fde4f9
     healthcheck:
       test: redis-cli ping || exit 1
 
   database:
-    container_name: immich_postgres
+    container_name: immich_postgres_dev
     image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23
     env_file:
       - .env
@@ -173,7 +176,7 @@ services:
     volumes:
       - ${UPLOAD_LOCATION}/postgres:/var/lib/postgresql/data
     ports:
-      - 5432:5432
+      - 5433:5432   # shifted so dev doesn't collide with prod on 5432
     shm_size: 128mb
     healthcheck:
       disable: false
