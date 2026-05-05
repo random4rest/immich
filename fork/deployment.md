@@ -1,6 +1,6 @@
 # Deployment
 
-Production deployment lives in the **sibling repo** `~/Projects/immich/immich-app/`. It's a separate local git repo (no remote yet) so it can be moved to a NAS later without dragging the source tree along.
+Production deployment lives in the **sibling repo** `~/Projects/immich/immich-app/` ([github.com/random4rest/immich-app](https://github.com/random4rest/immich-app), private). It's a separate repo so it can be moved to a NAS later without dragging the source tree along.
 
 ## Why two repos
 
@@ -25,8 +25,11 @@ immich-app/
 ├── .env.example                # commit this
 ├── .env                        # gitignored — secrets
 ├── readme.md                   # deploy instructions + NAS migration notes
-└── scripts/
-    └── deploy.sh               # bumps IMMICH_VERSION + recreates server
+├── scripts/
+│   └── deploy.sh               # bumps IMMICH_VERSION + recreates server
+└── tools/                      # client-side import tooling (cloneable to other devices)
+    ├── process-roll.sh         # film-scan EXIF stamper + uploader
+    └── AGENTS.md
 ```
 
 ## Prod stack
