@@ -10,6 +10,7 @@
   import type { LatLng } from '$lib/types';
   import { delay } from '$lib/utils/asset-utils';
   import { handleError } from '$lib/utils/handle-error';
+  import { searchNominatim, type NominatimPlace } from '$lib/utils/nominatim';
   import { searchPlaces, type AssetResponseDto, type PlacesResponseDto } from '@immich/sdk';
   import { ConfirmModal, LoadingSpinner } from '@immich/ui';
   import { mdiMapMarkerMultipleOutline } from '@mdi/js';
@@ -25,12 +26,15 @@
 
   let places: PlacesResponseDto[] = $state([]);
   let suggestedPlaces: PlacesResponseDto[] = $derived(places.slice(0, 5));
+  let nominatimPlaces: NominatimPlace[] = $state([]);
   let searchWord: string = $state('');
   let latestSearchTimeout: number;
+  let nominatimAbort: AbortController | undefined;
   let showLoadingSpinner = $state(false);
   let suggestionContainer: HTMLDivElement | undefined = $state();
   let hideSuggestion = $state(false);
   let mapElement = $state<ReturnType<typeof Map>>();
+  let hasAnySuggestion = $derived(suggestedPlaces.length > 0 || nominatimPlaces.length > 0);
 
   let assetPoint = $derived.by<LatLng | undefined>(() => {
     if (!asset || !asset.exifInfo) {
@@ -58,6 +62,7 @@
   $effect(() => {
     if (searchWord === '') {
       suggestedPlaces = [];
+      nominatimPlaces = [];
     }
   });
 
@@ -84,6 +89,7 @@
     const searchTimeout = window.setTimeout(() => {
       if (searchWord === '') {
         places = [];
+        nominatimPlaces = [];
         showLoadingSpinner = false;
         return;
       }
@@ -103,28 +109,51 @@
           coordinateLng <= 180
         ) {
           places = [];
+          nominatimPlaces = [];
           showLoadingSpinner = false;
           handleUseSuggested(coordinateLat, coordinateLng);
           return;
         }
       }
 
-      searchPlaces({ name: searchWord })
+      // Fire local DB search and Nominatim search in parallel; both render together.
+      const localSearch = searchPlaces({ name: searchWord })
         .then((searchResult) => {
-          // skip result when a newer search is happening
           if (latestSearchTimeout === searchTimeout) {
             places = searchResult;
-            showLoadingSpinner = false;
           }
         })
         .catch((error) => {
-          // skip error when a newer search is happening
           if (latestSearchTimeout === searchTimeout) {
             places = [];
             handleError(error, $t('errors.cant_search_places'));
-            showLoadingSpinner = false;
           }
         });
+
+      // Cancel any in-flight Nominatim request from earlier keystrokes.
+      nominatimAbort?.abort();
+      nominatimAbort = new AbortController();
+      const nominatimSearch = searchNominatim(searchWord, nominatimAbort.signal)
+        .then((result) => {
+          if (latestSearchTimeout === searchTimeout) {
+            nominatimPlaces = result;
+          }
+        })
+        .catch((error) => {
+          if (error?.name === 'AbortError') {
+            return;
+          }
+          if (latestSearchTimeout === searchTimeout) {
+            nominatimPlaces = [];
+            console.warn('[GeolocationPointPicker] Nominatim search failed', error);
+          }
+        });
+
+      Promise.all([localSearch, nominatimSearch]).finally(() => {
+        if (latestSearchTimeout === searchTimeout) {
+          showLoadingSpinner = false;
+        }
+      });
     }, timeDebounceOnSearch);
     latestSearchTimeout = searchTimeout;
   };
@@ -158,9 +187,12 @@
                 placeholder={$t('search_places')}
                 bind:name={searchWord}
                 {showLoadingSpinner}
-                onReset={() => (suggestedPlaces = [])}
+                onReset={() => {
+                  suggestedPlaces = [];
+                  nominatimPlaces = [];
+                }}
                 onSearch={handleSearchPlaces}
-                roundedBottom={suggestedPlaces.length === 0 || hideSuggestion}
+                roundedBottom={!hasAnySuggestion || hideSuggestion}
               />
             </button>
           </div>
@@ -172,12 +204,12 @@
           bind:this={suggestionContainer}
           use:clickOutside={{ onOutclick: () => (hideSuggestion = true) }}
         >
-          {#if !hideSuggestion}
+          {#if !hideSuggestion && hasAnySuggestion}
             {#each suggestedPlaces as place, index (place.latitude + place.longitude)}
               <button
                 type="button"
-                class=" flex w-full border-t border-gray-400 dark:border-immich-dark-gray h-14 place-items-center bg-gray-200 p-2 dark:bg-gray-700 hover:bg-gray-300 hover:dark:bg-[#232932] focus:bg-gray-300 focus:dark:bg-[#232932] {index ===
-                suggestedPlaces.length - 1
+                class="flex w-full border-t border-gray-400 dark:border-immich-dark-gray h-14 place-items-center bg-gray-200 p-2 dark:bg-gray-700 hover:bg-gray-300 hover:dark:bg-[#232932] focus:bg-gray-300 focus:dark:bg-[#232932] {nominatimPlaces.length ===
+                  0 && index === suggestedPlaces.length - 1
                   ? 'rounded-b-lg border-b'
                   : ''}"
                 onclick={() => handleUseSuggested(place.latitude, place.longitude)}
@@ -187,6 +219,36 @@
                 </p>
               </button>
             {/each}
+
+            {#if nominatimPlaces.length > 0}
+              <div
+                class="flex w-full border-t border-gray-400 dark:border-immich-dark-gray bg-gray-100 dark:bg-gray-800 p-2 ps-6"
+              >
+                <span class="text-xs uppercase tracking-wide text-gray-600 dark:text-gray-400">
+                  Points of interest (OpenStreetMap)
+                </span>
+              </div>
+              {#each nominatimPlaces as place, index (`osm-${place.lat}-${place.lng}-${index}`)}
+                <button
+                  type="button"
+                  class="flex w-full border-t border-gray-400 dark:border-immich-dark-gray h-14 place-items-center bg-gray-200 p-2 dark:bg-gray-700 hover:bg-gray-300 hover:dark:bg-[#232932] focus:bg-gray-300 focus:dark:bg-[#232932] {index ===
+                  nominatimPlaces.length - 1
+                    ? 'rounded-b-lg border-b'
+                    : ''}"
+                  onclick={() => handleUseSuggested(place.lat, place.lng)}
+                  title={place.displayName}
+                >
+                  <div class="ms-4 flex flex-col items-start min-w-0">
+                    <p class="text-sm text-gray-700 dark:text-gray-100 truncate w-full text-start">
+                      {place.name}
+                    </p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 truncate w-full text-start">
+                      {place.displayName}
+                    </p>
+                  </div>
+                </button>
+              {/each}
+            {/if}
           {/if}
         </div>
       </div>
