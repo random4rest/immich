@@ -384,6 +384,16 @@ jobs:
           persist-credentials: false
           submodules: 'recursive'
           token: ${{ steps.token.outputs.token }}
+      # Fork: the test-assets submodule isn't registered (gitlink missing), so the
+      # EXIF specs read empty files and assert on placeholder data. Clone it
+      # explicitly. Upstream's submodule init already handles this.
+      - name: Fetch test-assets (fork only)
+        if: github.repository != 'immich-app/immich'
+        working-directory: ${{ github.workspace }}
+        run: |
+          if [ ! -d e2e/test-assets ] || [ -z "$(ls -A e2e/test-assets 2>/dev/null)" ]; then
+            git clone --depth=1 https://github.com/immich-app/test-assets.git e2e/test-assets
+          fi
       - name: Setup pnpm
         uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
       - name: Setup Node
