@@ -37,6 +37,10 @@ export type TimelineAsset = {
   people: string[] | null;
   latitude?: number | null;
   longitude?: number | null;
+  // Bumped client-side after a non-destructive edit (e.g. rotate) so the
+  // thumbnail URL changes even when `thumbhash` is unchanged. Appended to the
+  // `c=` cache-buster query param.
+  editVersion?: string;
 };
 
 export type MoveAsset = { asset: TimelineAsset; date: TimelineDate };
