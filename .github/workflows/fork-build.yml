@@ -1,0 +1,52 @@
+name: Fork build
+
+# Fork-specific CI: smoke tests that the fork's deltas (compose changes,
+# scripts, docs) haven't broken the build. Lives in its own file so upstream
+# syncs don't merge-conflict with it.
+#
+# Only runs on the fork — the upstream repo has its own (much heavier) CI.
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*-personal.*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  shellcheck-scripts:
+    name: ShellCheck (fork scripts)
+    if: github.repository != 'immich-app/immich'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: ./scripts
+
+  docker-server:
+    name: Build server image
+    if: github.repository != 'immich-app/immich'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build server (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: server/Dockerfile
+          push: false
+          build-args: |
+            BUILD_ID=${{ github.ref_name }}
+          tags: immich-server:ci-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
