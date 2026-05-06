@@ -23,7 +23,8 @@
 
       try {
         await updateAssets({ assetBulkUpdateDto: { ids, description } });
-        assetMultiSelectManager.clear();
+        // [fork] selection intentionally preserved so the user can chain bulk edits.
+        // Clear via Esc / X on the bar.
       } catch (error) {
         handleError(error, $t('errors.unable_to_change_description'));
       }

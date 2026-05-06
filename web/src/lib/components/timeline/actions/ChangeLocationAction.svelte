@@ -27,7 +27,8 @@
     try {
       await updateAssets({ assetBulkUpdateDto: { ids, latitude: point.lat, longitude: point.lng } });
       toastManager.primary();
-      assetMultiSelectManager.clear();
+      // [fork] selection intentionally preserved so the user can chain bulk edits
+      // (e.g. change-location → change-date). Clear via Esc / X on the bar.
     } catch (error) {
       handleError(error, $t('errors.unable_to_update_location'));
     }

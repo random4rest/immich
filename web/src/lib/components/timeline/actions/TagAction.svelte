@@ -18,10 +18,9 @@
 
   const handleTagAssets = async () => {
     const assets = assetMultiSelectManager.ownedAssets;
-    const didUpdate = await modalManager.show(AssetTagModal, { assetIds: assets.map(({ id }) => id) });
-    if (didUpdate) {
-      assetMultiSelectManager.clear();
-    }
+    await modalManager.show(AssetTagModal, { assetIds: assets.map(({ id }) => id) });
+    // [fork] selection intentionally preserved so the user can chain bulk edits.
+    // Clear via Esc / X on the bar.
   };
 </script>
 

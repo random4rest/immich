@@ -17,13 +17,12 @@
   const handleChangeDate = async () => {
     const assets = assetMultiSelectManager.ownedAssets;
     const initialDate = assets.length === 1 ? fromTimelinePlainDateTime(assets[0].localDateTime) : DateTime.now();
-    const success = await modalManager.show(AssetSelectionChangeDateModal, {
+    await modalManager.show(AssetSelectionChangeDateModal, {
       initialDate,
       assets,
     });
-    if (success) {
-      assetMultiSelectManager.clear();
-    }
+    // [fork] selection intentionally preserved so the user can chain bulk edits
+    // (e.g. change-date → change-location). Clear via Esc / X on the bar.
   };
 </script>
 
