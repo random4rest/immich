@@ -69,7 +69,8 @@
 
     timelineManager.upsertAssets(updatedAssets);
 
-    assetMultiSelectManager.clear();
+    // [fork] selection intentionally preserved so the user can chain bulk edits.
+    // Clear via Esc / X on the bar.
   };
 
   const onKeyDown = (event: KeyboardEvent) => {
