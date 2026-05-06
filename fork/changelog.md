@@ -6,6 +6,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+_Nothing yet._
+
+---
+
+## [v2.7.5-personal.3] — 2026-05-06
+
 ### Changed
 - Bulk metadata-edit actions (change-date, change-location, change-description, tag) no longer clear the multi-select after success. The selection bar stays open so you can chain edits (e.g. fix the location of a roll, then fix the date without re-selecting). Destructive / view-changing actions (delete, archive, remove-from-album, etc.) still clear because the assets are no longer relevant. Clear manually with Esc or the X on the bar. Touched files are tagged with `// [fork]` for merge visibility.
 
